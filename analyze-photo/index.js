@@ -76,49 +76,73 @@ module.exports = function (context, message) {
 };
 
 
-function updateFileMetaData(message, visionData, error) {
-      // Document DB requires ID to be a string
-      // Convert message id to string
-      message.id = message.id + '';      
+function updateFileMetaData(message, visionData, error)
+{
+  // Document DB requires ID to be a string
+  // Convert message id to string
+  message.id = message.id + '';      
 
-      // Keep a record of the raw/unedited Vision data
-      message['azure_vision_data'] = {
-        timestamp: new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''),
-        data: visionData,
-        error: error
-      };
+  // Keep a record of the raw/unedited Vision data
+  message['azure_vision_data'] = {
+    timestamp: new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''),
+    data: visionData,
+    error: error
+  };
 
-      if( visionData ) {
-        // Flatten/append vision data to the file object
-        message['isAdultContent'] =  visionData.adult.isAdultContent;
-        message['isRacyContent'] =  visionData.adult.isRacyContent;
-        message['auto_tags'] = extractConfidenceList(visionData.tags, 'name', 0.1);
-        message['auto_categories'] = visionData.categories ? extractConfidenceList(visionData.categories, 'name', 0.1) : [];
-        message['auto_captions'] =  extractConfidenceList(visionData.description.captions, 'text', 0.1);
-        message['auto_description_tags'] =  visionData.description.tags;
-        message['auto_dominantColorForeground'] =  visionData.color.dominantColorForeground;
-        message['auto_dominantColorBackground'] =  visionData.color.dominantColorBackground;
-        message['auto_accentColor'] =  visionData.color.accentColor;
-        message['auto_isBWImg'] =  visionData.color.isBWImg;
-        message['auto_clipArtType'] =  visionData.imageType.clipArtType;
-        message['auto_lineDrawingType'] =  visionData.imageType.lineDrawingType;
-      }
+  if( visionData ) {
+    // Flatten/append vision data to the file object
+    message['isAdultContent'] =  visionData.adult.isAdultContent;
+    message['isRacyContent'] =  visionData.adult.isRacyContent;
+    message['auto_tags'] = extractConfidenceList(visionData.tags, 'name', 0.1);
+    message['auto_categories'] = visionData.categories ? extractConfidenceList(visionData.categories, 'name', 0.1) : [];
+    message['auto_captions'] =  extractConfidenceList(visionData.description.captions, 'text', 0.1);
+    message['auto_description_tags'] =  visionData.description.tags;
+    message['auto_dominantColorForeground'] =  visionData.color.dominantColorForeground;
+    message['auto_dominantColorBackground'] =  visionData.color.dominantColorBackground;
+    message['auto_accentColor'] =  visionData.color.accentColor;
+    message['auto_isBWImg'] =  visionData.color.isBWImg;
+    message['auto_clipArtType'] =  visionData.imageType.clipArtType;
+    message['auto_lineDrawingType'] =  visionData.imageType.lineDrawingType;
+  }
 
-      // Convert existing tags field from comma seperated string to array
-      if( message.tags && typeof message.tags === 'string' ) {
-        message.tags = message.tags.split(',');
-      } else {
-        message.tags = [];
-      }
+  // Convert existing tags field from comma seperated string to array
+  if( message.tags && typeof message.tags === 'string' ) {
+    message.tags = message.tags.split(',');
+  } else {
+    message.tags = [];
+  }
       
-      // Azure Search requires location to be a single field
-      if( message.latitude && typeof message.latitude === 'number') {
-        message['location'] = {
-          type: 'Point',
-          coordinates: [message.longitude, message.latitude]
-        }
-      }      
+  // Azure Search requires location to be a single field
+  if( message.latitude && typeof message.latitude === 'number') {
+    message['location'] = {
+      type: 'Point',
+      coordinates: [message.longitude, message.latitude]
+    }
+  } 
+
+  // Convert date to a long form text good for searching
+  if( message.sorting_time ) {
+    message['sorting_time_string'] = formatDate(new Date(message.sorting_time));
+  }     
 }
+
+// Source: http://stackoverflow.com/questions/3552461/how-to-format-a-javascript-date
+function formatDate(date) {
+  var monthNames = [
+    "January", "February", "March",
+    "April", "May", "June", "July",
+    "August", "September", "October",
+    "November", "December"
+  ];
+
+  var day = date.getDate();
+  var monthIndex = date.getMonth();
+  var year = date.getFullYear();
+
+  return day + ' ' + monthNames[monthIndex] + ' ' + year;
+}
+
+
 
 function throwError(context, message) {
   logVerbose(context, 'Error: ' + message);
