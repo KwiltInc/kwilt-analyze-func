@@ -107,6 +107,8 @@ function updateFileMetaData(message, visionData, error) {
       // Convert existing tags field from comma seperated string to array
       if( message.tags && typeof message.tags === 'string' ) {
         message.tags = message.tags.split(',');
+      } else {
+        message.tags = [];
       }
       
       // Azure Search requires location to be a single field
